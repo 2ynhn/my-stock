@@ -29,10 +29,6 @@
   {"ticker": "033780.KS", "name": "KT&G", "market": "KR"},
   {"ticker": "015760.KS", "name": "한국전력", "market": "KR"},
   {"ticker": "241560.KS", "name": "두산밥캣", "market": "KR"},
-  {"ticker": "032830.KS", "name": "삼성생명", "market": "KR"},
-  {"ticker": "010950.KS", "name": "S-Oil", "market": "KR"},
-  {"ticker": "009150.KS", "name": "삼성전기", "market": "KR"},
-  {"ticker": "000100.KS", "name": "유한양행", "market": "KR"},
   {"ticker": "247540.KQ", "name": "에코프로비엠", "market": "KR"},
   {"ticker": "086520.KQ", "name": "에코프로", "market": "KR"},
   {"ticker": "022100.KQ", "name": "포스코DX", "market": "KR"},
@@ -45,8 +41,5 @@
   {"ticker": "403870.KQ", "name": "HPSP", "market": "KR"},
   {"ticker": "357780.KQ", "name": "솔브레인", "market": "KR"},
   {"ticker": "263750.KQ", "name": "펄어비스", "market": "KR"},
-  {"ticker": "259960.KQ", "name": "크래프톤", "market": "KR"},
-  {"ticker": "145020.KQ", "name": "휴젤", "market": "KR"},
-  {"ticker": "039030.KQ", "name": "이오테크닉스", "market": "KR"},
-  {"ticker": "041510.KQ", "name": "에스엠", "market": "KR"}
+  {"ticker": "259960.KS", "name": "크래프톤", "market": "KR"}
 ]
