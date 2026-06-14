@@ -54,19 +54,24 @@ export default function SearchBar({ onAdd, existingTickers, apiKeys }) {
   const handleAdd = async () => {
     setAddError(null)
     if (mode === 'KR') {
-      if (!selected) {
-        setAddError('종목을 선택해주세요.')
+      const q = query.trim().toLowerCase()
+      const target = selected || krStocks.find(
+        s => s.name.toLowerCase() === q || s.ticker.toLowerCase() === q
+      )
+      if (!target) {
+        setAddError('목록에서 종목을 선택해주세요.')
         return
       }
-      if (existingTickers.includes(selected.ticker)) {
+      if (existingTickers.includes(target.ticker)) {
         setAddError('이미 추가된 종목입니다.')
         return
       }
       setIsAdding(true)
       try {
-        await onAdd(selected)
+        await onAdd(target)
         setQuery('')
         setSelected(null)
+        setSuggestions([])
       } finally {
         setIsAdding(false)
       }

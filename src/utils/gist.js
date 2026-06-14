@@ -7,7 +7,12 @@ export async function findOrCreateGist(pat) {
   }
 
   const res = await fetch('https://api.github.com/gists', { headers })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(`GitHub API 인증 실패 (${res.status}): ${err.message || 'PAT 토큰을 확인해주세요. gist 스코프가 필요합니다.'}`)
+  }
   const gists = await res.json()
+  if (!Array.isArray(gists)) throw new Error('GitHub API 응답 오류: PAT 토큰을 확인해주세요.')
 
   const existing = gists.find(g => g.files[GIST_FILENAME])
   if (existing) return existing.id
