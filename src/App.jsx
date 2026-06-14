@@ -14,7 +14,7 @@ export default function App() {
     return {
       githubPat: localStorage.getItem('githubPat') || '',
       geminiApiKey: localStorage.getItem('geminiApiKey') || '',
-      geminiModel: localStorage.getItem('geminiModel') || 'gemini-2.0-flash-001',
+      geminiModel: localStorage.getItem('geminiModel') || 'gemini-2.5-flash',
     }
   })
   const [briefings, setBriefings] = useState({})
