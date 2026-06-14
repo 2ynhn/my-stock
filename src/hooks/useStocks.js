@@ -1,26 +1,31 @@
 import { useState, useEffect, useRef } from 'react'
 import { findOrCreateGist, loadStocks, saveStocks } from '../utils/gist.js'
 
-export default function useStocks(apiKeys) {
+export default function useStocks(apiKeys, activeProfile) {
   const [stocks, setStocks] = useState([])
-  const [gistId, setGistId] = useState(() => localStorage.getItem('gistId') || null)
+  const [gistId, setGistId] = useState(null)
   const [initialized, setInitialized] = useState(false)
   const [gistError, setGistError] = useState(null)
   const saveTimerRef = useRef(null)
 
   useEffect(() => {
-    if (!apiKeys.githubPat) return
+    if (!apiKeys.githubPat || !activeProfile) return
+
+    setInitialized(false)
+    setStocks([])
 
     async function init() {
       try {
-        let id = gistId
+        const cacheKey = `gistId_${activeProfile}`
+        let id = localStorage.getItem(cacheKey)
         if (!id) {
-          id = await findOrCreateGist(apiKeys.githubPat)
-          localStorage.setItem('gistId', id)
-          setGistId(id)
+          id = await findOrCreateGist(apiKeys.githubPat, activeProfile)
+          localStorage.setItem(cacheKey, id)
         }
-        const loaded = await loadStocks(apiKeys.githubPat, id)
+        setGistId(id)
+        const loaded = await loadStocks(apiKeys.githubPat, id, activeProfile)
         setStocks(loaded)
+        setGistError(null)
       } catch (e) {
         console.error('Failed to init gist:', e)
         setGistError(e.message || 'GitHub Gist 연결 실패')
@@ -30,13 +35,13 @@ export default function useStocks(apiKeys) {
     }
 
     init()
-  }, [apiKeys.githubPat])
+  }, [apiKeys.githubPat, activeProfile])
 
   const persistStocks = (newStocks, id) => {
     if (!apiKeys.githubPat || !id) return
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
-      saveStocks(apiKeys.githubPat, id, newStocks).catch(console.error)
+      saveStocks(apiKeys.githubPat, id, activeProfile, newStocks).catch(console.error)
     }, 800)
   }
 

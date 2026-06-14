@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Settings2, ArrowUpDown } from 'lucide-react'
+import { Settings2, ArrowUpDown, Eye } from 'lucide-react'
 import Settings from './components/Settings.jsx'
 import SearchBar from './components/SearchBar.jsx'
 import SummaryCards from './components/SummaryCards.jsx'
@@ -7,6 +7,7 @@ import StockCard from './components/StockCard.jsx'
 import useStocks from './hooks/useStocks.js'
 import { fetchBriefings } from './utils/gemini.js'
 import { getCachedBriefings, cacheBriefing, getSlotLabel } from './utils/briefingCache.js'
+import { PROFILES } from './utils/gist.js'
 
 export default function App() {
   const [showSettings, setShowSettings] = useState(false)
@@ -18,13 +19,18 @@ export default function App() {
       geminiModel: localStorage.getItem('geminiModel') || 'gemini-2.5-flash',
     }
   })
+  // 이 기기의 소유자(편집 가능 프로필)
+  const [myProfile, setMyProfile] = useState(() => localStorage.getItem('myProfile') || PROFILES[0].id)
+  // 현재 보고 있는 프로필
+  const [activeProfile, setActiveProfile] = useState(() => localStorage.getItem('myProfile') || PROFILES[0].id)
   const [briefings, setBriefings] = useState({})
   const [loadingTickers, setLoadingTickers] = useState([])
   const [error, setError] = useState(null)
 
   const hasKeys = apiKeys.githubPat && apiKeys.geminiApiKey
+  const canEdit = activeProfile === myProfile
 
-  const { stocks, addStock, removeStock, gistError } = useStocks(apiKeys)
+  const { stocks, addStock, removeStock, gistError } = useStocks(apiKeys, activeProfile)
 
   const loadBriefings = useCallback(async (stockList) => {
     if (!stockList.length || !apiKeys.geminiApiKey) return
@@ -61,8 +67,13 @@ export default function App() {
     }
   }, [stocks, apiKeys.geminiApiKey])
 
-  const handleSaveSettings = (keys) => {
+  const handleSaveSettings = (keys, profile) => {
     setApiKeys(keys)
+    if (profile && profile !== myProfile) {
+      setMyProfile(profile)
+      localStorage.setItem('myProfile', profile)
+      setActiveProfile(profile)
+    }
     setShowSettings(false)
   }
 
@@ -101,6 +112,8 @@ export default function App() {
     return b && b.changeRate < 0
   }).length
 
+  const activeLabel = PROFILES.find(p => p.id === activeProfile)?.label || ''
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="max-w-6xl mx-auto px-4 py-6">
@@ -110,13 +123,28 @@ export default function App() {
             <h1 className="text-3xl font-bold text-slate-900">📈 나의 주식 브리핑</h1>
             <p className="text-slate-500 text-sm mt-1">{getSlotLabel()}</p>
           </div>
-          <button
-            onClick={() => setShowSettings(true)}
-            className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 transition-colors shadow-sm"
-            title="설정"
-          >
-            <Settings2 className="w-5 h-5 text-slate-600" />
-          </button>
+          <div className="flex items-center gap-2">
+            {hasKeys && (
+              <div className="flex bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+                {PROFILES.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => setActiveProfile(p.id)}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activeProfile === p.id ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-800'}`}
+                  >
+                    {p.label}{p.id === myProfile ? ' (나)' : ''}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 transition-colors shadow-sm"
+              title="설정"
+            >
+              <Settings2 className="w-5 h-5 text-slate-600" />
+            </button>
+          </div>
         </div>
 
         {!hasKeys ? (
@@ -139,9 +167,16 @@ export default function App() {
           <>
             <SummaryCards total={stocks.length} up={upCount} down={downCount} />
 
-            <div className="mb-4">
-              <SearchBar onAdd={handleAddStock} existingTickers={stocks.map(s => s.ticker)} apiKeys={apiKeys} />
-            </div>
+            {canEdit ? (
+              <div className="mb-4">
+                <SearchBar onAdd={handleAddStock} existingTickers={stocks.map(s => s.ticker)} apiKeys={apiKeys} />
+              </div>
+            ) : (
+              <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-4 py-3 mb-4 text-sm flex items-center gap-2">
+                <Eye className="w-4 h-4 flex-shrink-0" />
+                <span>{activeLabel}님의 종목을 보는 중입니다 (보기 전용). 편집하려면 본인 프로필로 전환하세요.</span>
+              </div>
+            )}
 
             {(error || gistError) && (
               <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-6 text-sm">
@@ -175,7 +210,7 @@ export default function App() {
             {stocks.length === 0 ? (
               <div className="text-center py-16 text-slate-400">
                 <div className="text-4xl mb-3">📊</div>
-                <p>관심 종목을 추가해보세요</p>
+                <p>{canEdit ? '관심 종목을 추가해보세요' : `${activeLabel}님이 등록한 종목이 없습니다`}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -185,7 +220,7 @@ export default function App() {
                     stock={stock}
                     briefingData={briefings[stock.ticker]}
                     isLoading={loadingTickers.includes(stock.ticker)}
-                    onRemove={() => handleRemoveStock(stock.ticker)}
+                    onRemove={canEdit ? () => handleRemoveStock(stock.ticker) : null}
                   />
                 ))}
               </div>
@@ -197,6 +232,7 @@ export default function App() {
       {showSettings && (
         <Settings
           initialKeys={apiKeys}
+          initialProfile={myProfile}
           onSave={handleSaveSettings}
           onCancel={() => setShowSettings(false)}
         />

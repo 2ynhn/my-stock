@@ -64,12 +64,14 @@ export default function StockCard({ stock, briefingData, isLoading, onRemove }) 
           </div>
           <span className="text-xs text-slate-400">{stock.ticker}</span>
         </div>
-        <button
-          onClick={onRemove}
-          className="text-slate-300 hover:text-red-400 transition-colors ml-2 mt-0.5 flex-shrink-0"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        {onRemove && (
+          <button
+            onClick={onRemove}
+            className="text-slate-300 hover:text-red-400 transition-colors ml-2 mt-0.5 flex-shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Price */}

@@ -1,16 +1,18 @@
 import React, { useState } from 'react'
 import { X, RefreshCw } from 'lucide-react'
 import { listModels } from '../utils/gemini.js'
+import { PROFILES } from '../utils/gist.js'
 
 const FALLBACK_MODELS = [
   { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash (기본, 빠름)' },
   { id: 'gemini-2.5-pro', label: 'gemini-2.5-pro (고품질)' },
 ]
 
-export default function Settings({ initialKeys, onSave, onCancel }) {
+export default function Settings({ initialKeys, initialProfile, onSave, onCancel }) {
   const [githubPat, setGithubPat] = useState(initialKeys.githubPat || '')
   const [geminiApiKey, setGeminiApiKey] = useState(initialKeys.geminiApiKey || '')
   const [geminiModel, setGeminiModel] = useState(initialKeys.geminiModel || 'gemini-2.5-flash')
+  const [myProfile, setMyProfile] = useState(initialProfile || PROFILES[0].id)
   const [models, setModels] = useState(FALLBACK_MODELS)
   const [loadingModels, setLoadingModels] = useState(false)
   const [modelError, setModelError] = useState(null)
@@ -43,7 +45,8 @@ export default function Settings({ initialKeys, onSave, onCancel }) {
     localStorage.setItem('githubPat', githubPat)
     localStorage.setItem('geminiApiKey', geminiApiKey)
     localStorage.setItem('geminiModel', geminiModel)
-    onSave({ githubPat, geminiApiKey, geminiModel })
+    localStorage.setItem('myProfile', myProfile)
+    onSave({ githubPat, geminiApiKey, geminiModel }, myProfile)
   }
 
   return (
@@ -57,6 +60,24 @@ export default function Settings({ initialKeys, onSave, onCancel }) {
         </div>
 
         <div className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              내 프로필
+            </label>
+            <div className="flex gap-2">
+              {PROFILES.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setMyProfile(p.id)}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${myProfile === p.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:text-slate-800'}`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">이 기기의 사용자입니다. 본인 프로필에서만 종목을 편집할 수 있습니다.</p>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
               GitHub Personal Access Token
