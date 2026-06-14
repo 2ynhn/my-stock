@@ -3,7 +3,7 @@ import { Plus, Search } from 'lucide-react'
 import { validateUSTicker } from '../utils/gemini.js'
 
 export default function SearchBar({ onAdd, existingTickers, apiKeys }) {
-  const [mode, setMode] = useState('KR') // 'KR' or 'US'
+  const [mode, setMode] = useState('KR')
   const [query, setQuery] = useState('')
   const [krStocks, setKrStocks] = useState([])
   const [suggestions, setSuggestions] = useState([])
