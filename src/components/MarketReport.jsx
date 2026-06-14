@@ -2,14 +2,19 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, ChevronDown, ChevronUp, Newspaper } from 'lucide-react'
 import { fetchMarketBriefing } from '../utils/gemini.js'
 
-function todayKey() {
-  const d = new Date()
-  return `marketReport_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+function cacheKey() {
+  const now = new Date()
+  if (now.getHours() < 8) {
+    const yesterday = new Date(now)
+    yesterday.setDate(yesterday.getDate() - 1)
+    return `marketReport_${yesterday.toISOString().slice(0, 10)}`
+  }
+  return `marketReport_${now.toISOString().slice(0, 10)}`
 }
 
 function readCache() {
   try {
-    const raw = localStorage.getItem(todayKey())
+    const raw = localStorage.getItem(cacheKey())
     return raw ? JSON.parse(raw) : null
   } catch {
     return null
@@ -29,7 +34,7 @@ export default function MarketReport({ apiKeys }) {
     try {
       const data = await fetchMarketBriefing(apiKeys.geminiApiKey, apiKeys.geminiModel)
       setReport(data)
-      try { localStorage.setItem(todayKey(), JSON.stringify(data)) } catch { /* ignore */ }
+      try { localStorage.setItem(cacheKey(), JSON.stringify(data)) } catch { /* ignore */ }
     } catch (e) {
       setError(e.message)
     } finally {
