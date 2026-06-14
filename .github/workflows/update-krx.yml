@@ -18,64 +18,59 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install pykrx
-        run: pip install pykrx
+      - name: Install FinanceDataReader
+        run: pip install finance-datareader
 
       - name: Fetch KRX full listing and build JSON
         run: |
           python3 << 'EOF'
-          import json
-          from datetime import datetime, timedelta
-          from pykrx import stock
-
-          # 최근 영업일 탐색 (휴일/주말이면 빈 목록이 나올 수 있음)
-          def recent_business_day():
-              d = datetime.now()
-              for _ in range(10):
-                  ymd = d.strftime("%Y%m%d")
-                  try:
-                      if stock.get_market_ticker_list(ymd, market="KOSPI"):
-                          return ymd
-                  except Exception:
-                      pass
-                  d -= timedelta(days=1)
-              return datetime.now().strftime("%Y%m%d")
-
-          day = recent_business_day()
-          print("기준일:", day)
+          import json, sys
+          import FinanceDataReader as fdr
 
           result = []
           seen = set()
 
-          def add(ticker, name, suffix):
-              key = ticker + suffix
+          def add(code, name, suffix):
+              code = str(code).strip().zfill(6)
+              key = code + suffix
+              name = (name or "").strip()
               if name and key not in seen:
                   seen.add(key)
-                  result.append({"ticker": key, "name": name.strip(), "market": "KR"})
+                  result.append({"ticker": key, "name": name, "market": "KR"})
 
-          # KOSPI 전종목 (.KS)
-          for t in stock.get_market_ticker_list(day, market="KOSPI"):
-              add(t, stock.get_market_ticker_name(t), ".KS")
-
-          # KOSDAQ 전종목 (.KQ)
-          for t in stock.get_market_ticker_list(day, market="KOSDAQ"):
-              add(t, stock.get_market_ticker_name(t), ".KQ")
+          # KOSPI / KOSDAQ 전종목
+          krx = fdr.StockListing("KRX")
+          name_col = "Name"
+          code_col = "Code" if "Code" in krx.columns else "Symbol"
+          for _, row in krx.iterrows():
+              market = str(row.get("Market", ""))
+              if market == "KOSPI":
+                  add(row[code_col], row[name_col], ".KS")
+              elif market == "KOSDAQ":
+                  add(row[code_col], row[name_col], ".KQ")
 
           # ETF (KODEX, TIGER 등 — KOSPI 상장이므로 .KS)
           try:
-              for t in stock.get_etf_ticker_list(day):
-                  add(t, stock.get_etf_ticker_name(t), ".KS")
+              etf = fdr.StockListing("ETF/KR")
+              ecode = "Symbol" if "Symbol" in etf.columns else "Code"
+              for _, row in etf.iterrows():
+                  add(row[ecode], row.get("Name"), ".KS")
           except Exception as e:
               print("ETF 수집 실패:", e)
 
           result.sort(key=lambda x: x["name"])
 
-          with open("public/krx-stocks.json", "w", encoding="utf-8") as f:
-              json.dump(result, f, ensure_ascii=False, indent=2)
-
           ks = sum(1 for x in result if x["ticker"].endswith(".KS"))
           kq = sum(1 for x in result if x["ticker"].endswith(".KQ"))
           print(f"Total: {len(result)} (.KS: {ks}, .KQ: {kq})")
+
+          # 안전장치: 비정상적으로 적으면 커밋하지 않도록 실패 처리
+          if len(result) < 1000:
+              print("ERROR: 결과가 너무 적습니다. 기존 파일을 유지합니다.")
+              sys.exit(1)
+
+          with open("public/krx-stocks.json", "w", encoding="utf-8") as f:
+              json.dump(result, f, ensure_ascii=False, indent=2)
           EOF
 
       - name: Commit updated krx-stocks.json
