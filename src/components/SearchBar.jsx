@@ -55,9 +55,9 @@ export default function SearchBar({ onAdd, existingTickers, apiKeys }) {
     setAddError(null)
     if (mode === 'KR') {
       const q = query.trim().toLowerCase()
-      const target = selected || krStocks.find(
-        s => s.name.toLowerCase() === q || s.ticker.toLowerCase() === q
-      )
+      const target = selected
+        || krStocks.find(s => s.name.toLowerCase() === q || s.ticker.toLowerCase() === q)
+        || suggestions[0]
       if (!target) {
         setAddError('목록에서 종목을 선택해주세요.')
         return
