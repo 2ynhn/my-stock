@@ -1,0 +1,124 @@
+import React from 'react'
+import { X, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+
+function SkeletonLine({ width = 'w-full', height = 'h-4' }) {
+  return <div className={`${width} ${height} bg-slate-700 rounded animate-pulse`} />
+}
+
+export default function StockCard({ stock, briefingData, isLoading, onRemove }) {
+  const isKR = stock.market === 'KR'
+
+  const getRiseColor = (rate) => {
+    if (rate === undefined || rate === null) return 'text-slate-400'
+    if (rate > 0) return isKR ? 'text-red-400' : 'text-green-400'
+    if (rate < 0) return isKR ? 'text-blue-400' : 'text-red-400'
+    return 'text-slate-400'
+  }
+
+  const getRiseBg = (rate) => {
+    if (rate === undefined || rate === null) return ''
+    if (rate > 0) return isKR ? 'bg-red-500/10' : 'bg-green-500/10'
+    if (rate < 0) return isKR ? 'bg-blue-500/10' : 'bg-red-500/10'
+    return ''
+  }
+
+  const formatPrice = (price, currency) => {
+    if (price === undefined || price === null) return '-'
+    if (currency === 'KRW' || currency === '원') {
+      return price.toLocaleString('ko-KR') + '원'
+    }
+    return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
+  const formatChange = (change, currency) => {
+    if (change === undefined || change === null) return ''
+    const sign = change >= 0 ? '+' : ''
+    if (currency === 'KRW' || currency === '원') {
+      return sign + change.toLocaleString('ko-KR') + '원'
+    }
+    return sign + '$' + Math.abs(change).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
+
+  const formatRate = (rate) => {
+    if (rate === undefined || rate === null) return ''
+    const sign = rate >= 0 ? '+' : ''
+    return `(${sign}${rate.toFixed(2)}%)`
+  }
+
+  const TrendIcon = briefingData?.changeRate > 0
+    ? TrendingUp
+    : briefingData?.changeRate < 0
+    ? TrendingDown
+    : Minus
+
+  return (
+    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 flex flex-col gap-4 hover:border-slate-600 transition-colors">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-semibold text-white">{stock.name}</span>
+            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${isKR ? 'bg-orange-500/20 text-orange-400' : 'bg-sky-500/20 text-sky-400'}`}>
+              {isKR ? '국내' : '해외'}
+            </span>
+          </div>
+          <span className="text-xs text-slate-500">{stock.ticker}</span>
+        </div>
+        <button
+          onClick={onRemove}
+          className="text-slate-600 hover:text-red-400 transition-colors ml-2 mt-0.5 flex-shrink-0"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Price */}
+      {isLoading ? (
+        <div className="space-y-2">
+          <SkeletonLine width="w-3/4" height="h-7" />
+          <SkeletonLine width="w-1/2" height="h-4" />
+        </div>
+      ) : briefingData ? (
+        <div className={`rounded-lg p-3 ${getRiseBg(briefingData.changeRate)}`}>
+          <div className={`text-2xl font-bold ${getRiseColor(briefingData.changeRate)}`}>
+            {formatPrice(briefingData.currentPrice, briefingData.currency)}
+          </div>
+          <div className={`flex items-center gap-1.5 text-sm mt-1 ${getRiseColor(briefingData.changeRate)}`}>
+            <TrendIcon className="w-4 h-4" />
+            <span>{formatChange(briefingData.change, briefingData.currency)}</span>
+            <span>{formatRate(briefingData.changeRate)}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="text-slate-500 text-sm">가격 정보 없음</div>
+      )}
+
+      {/* Briefing */}
+      {isLoading ? (
+        <div className="space-y-2">
+          <SkeletonLine />
+          <SkeletonLine width="w-5/6" />
+          <SkeletonLine width="w-4/5" />
+        </div>
+      ) : briefingData?.briefing && briefingData.briefing.length > 0 ? (
+        <ul className="space-y-1.5">
+          {briefingData.briefing.map((line, i) => (
+            <li key={i} className="flex gap-2 text-xs text-slate-300">
+              <span className="text-blue-400 mt-0.5 flex-shrink-0">•</span>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      ) : !isLoading && (
+        <p className="text-xs text-slate-500">브리핑 정보 없음</p>
+      )}
+
+      {/* Slot label */}
+      {briefingData?.lastUpdated && (
+        <div className="text-xs text-slate-600 border-t border-slate-700 pt-3">
+          {briefingData.lastUpdated}
+        </div>
+      )}
+    </div>
+  )
+}
