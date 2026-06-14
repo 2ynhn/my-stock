@@ -1,39 +1,42 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Plus, Search } from 'lucide-react'
-import { validateUSTicker, validateKRStock } from '../utils/gemini.js'
+import { searchSymbols } from '../utils/yahoo.js'
 
-export default function SearchBar({ onAdd, existingTickers, apiKeys }) {
-  const [mode, setMode] = useState('KR')
+export default function SearchBar({ onAdd, existingTickers }) {
   const [query, setQuery] = useState('')
-  const [krStocks, setKrStocks] = useState([])
   const [suggestions, setSuggestions] = useState([])
   const [selected, setSelected] = useState(null)
+  const [isSearching, setIsSearching] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [addError, setAddError] = useState(null)
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
+  const abortRef = useRef(null)
 
+  // 디바운스 검색
   useEffect(() => {
-    fetch('/my-stock/krx-stocks.json')
-      .then(r => r.json())
-      .then(data => setKrStocks(data))
-      .catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    if (mode === 'KR' && query.trim().length > 0) {
-      const q = query.trim().toLowerCase()
-      const filtered = krStocks.filter(
-        s =>
-          s.name.toLowerCase().includes(q) ||
-          s.ticker.toLowerCase().includes(q)
-      ).slice(0, 8)
-      setSuggestions(filtered)
-      setSelected(null)
-    } else {
+    const q = query.trim()
+    if (q.length === 0) {
       setSuggestions([])
+      setIsSearching(false)
+      return
     }
-  }, [query, mode, krStocks])
+    setIsSearching(true)
+    const timer = setTimeout(async () => {
+      if (abortRef.current) abortRef.current.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+      try {
+        const results = await searchSymbols(q, controller.signal)
+        setSuggestions(results)
+      } catch (e) {
+        if (e.name !== 'AbortError') setSuggestions([])
+      } finally {
+        setIsSearching(false)
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [query])
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -53,56 +56,23 @@ export default function SearchBar({ onAdd, existingTickers, apiKeys }) {
 
   const handleAdd = async () => {
     setAddError(null)
-    if (mode === 'KR') {
-      const q = query.trim().toLowerCase()
-      if (!q) {
-        setAddError('종목명을 입력해주세요.')
-        return
-      }
-      // 1) 번들 목록에서 우선 매칭
-      let target = selected
-        || krStocks.find(s => s.name.toLowerCase() === q || s.ticker.toLowerCase() === q)
-        || suggestions[0]
-
-      setIsAdding(true)
-      try {
-        // 2) 목록에 없으면 Gemini로 실시간 조회
-        if (!target) {
-          target = await validateKRStock(query.trim(), apiKeys.geminiApiKey, apiKeys.geminiModel)
-        }
-        if (existingTickers.includes(target.ticker)) {
-          setAddError('이미 추가된 종목입니다.')
-          return
-        }
-        await onAdd({ ticker: target.ticker, name: target.name, market: 'KR' })
-        setQuery('')
-        setSelected(null)
-        setSuggestions([])
-      } catch (e) {
-        setAddError(e.message || '종목을 찾을 수 없습니다.')
-      } finally {
-        setIsAdding(false)
-      }
-    } else {
-      const ticker = query.trim().toUpperCase()
-      if (!ticker) {
-        setAddError('티커를 입력해주세요.')
-        return
-      }
-      if (existingTickers.includes(ticker)) {
-        setAddError('이미 추가된 종목입니다.')
-        return
-      }
-      setIsAdding(true)
-      try {
-        const info = await validateUSTicker(ticker, apiKeys.geminiApiKey, apiKeys.geminiModel)
-        await onAdd({ ticker, name: info.name || ticker, market: 'US' })
-        setQuery('')
-      } catch (e) {
-        setAddError(e.message || '유효하지 않은 티커입니다.')
-      } finally {
-        setIsAdding(false)
-      }
+    const target = selected || suggestions[0]
+    if (!target) {
+      setAddError('목록에서 종목을 선택해주세요.')
+      return
+    }
+    if (existingTickers.includes(target.ticker)) {
+      setAddError('이미 추가된 종목입니다.')
+      return
+    }
+    setIsAdding(true)
+    try {
+      await onAdd({ ticker: target.ticker, name: target.name, market: target.market })
+      setQuery('')
+      setSelected(null)
+      setSuggestions([])
+    } finally {
+      setIsAdding(false)
     }
   }
 
@@ -113,21 +83,6 @@ export default function SearchBar({ onAdd, existingTickers, apiKeys }) {
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-      <div className="flex gap-2 mb-3">
-        <button
-          onClick={() => { setMode('KR'); setQuery(''); setSelected(null) }}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${mode === 'KR' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:text-slate-800'}`}
-        >
-          🇰🇷 국내주식
-        </button>
-        <button
-          onClick={() => { setMode('US'); setQuery(''); setSelected(null) }}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${mode === 'US' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 hover:text-slate-800'}`}
-        >
-          🇺🇸 미국주식
-        </button>
-      </div>
-
       <div className="relative flex gap-2" ref={dropdownRef}>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -137,19 +92,27 @@ export default function SearchBar({ onAdd, existingTickers, apiKeys }) {
             value={query}
             onChange={e => { setQuery(e.target.value); setSelected(null) }}
             onKeyDown={handleKeyDown}
-            placeholder={mode === 'KR' ? '종목명 검색 (예: 두산퓨얼셀, KODEX 200)' : '티커 입력 (예: AAPL, TSLA)'}
-            className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-9 pr-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="종목명/티커 검색 (예: 삼성전자, AAPL, KODEX 200)"
+            className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-9 pr-9 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
+          {isSearching && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin w-4 h-4 border-2 border-slate-300 border-t-blue-500 rounded-full inline-block" />
+          )}
           {suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 overflow-hidden">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 overflow-hidden max-h-80 overflow-y-auto">
               {suggestions.map(s => (
                 <button
                   key={s.ticker}
                   onMouseDown={() => handleSelect(s)}
                   className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors text-left"
                 >
-                  <span className="text-slate-800 text-sm font-medium">{s.name}</span>
-                  <span className="text-slate-400 text-xs ml-2">{s.ticker}</span>
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${s.market === 'KR' ? 'bg-orange-100 text-orange-600' : 'bg-sky-100 text-sky-600'}`}>
+                      {s.market === 'KR' ? '국내' : '해외'}
+                    </span>
+                    <span className="text-slate-800 text-sm font-medium truncate">{s.name}</span>
+                  </span>
+                  <span className="text-slate-400 text-xs ml-2 flex-shrink-0">{s.ticker}</span>
                 </button>
               ))}
             </div>
