@@ -21,6 +21,37 @@ function parseJSON(text) {
   return JSON.parse(cleaned)
 }
 
+// 응답의 모든 파트 텍스트를 합친다 (grounding 사용 시 여러 파트로 나뉠 수 있음)
+function collectText(data) {
+  const parts = data.candidates?.[0]?.content?.parts || []
+  return parts.map(p => p.text || '').join('')
+}
+
+// 텍스트에서 첫 번째 균형 잡힌 JSON 객체/배열을 추출
+function extractJSON(text, open, close) {
+  const start = text.indexOf(open)
+  if (start === -1) return null
+  let depth = 0
+  let inStr = false
+  let esc = false
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i]
+    if (inStr) {
+      if (esc) esc = false
+      else if (ch === '\\') esc = true
+      else if (ch === '"') inStr = false
+    } else {
+      if (ch === '"') inStr = true
+      else if (ch === open) depth++
+      else if (ch === close) {
+        depth--
+        if (depth === 0) return text.slice(start, i + 1)
+      }
+    }
+  }
+  return null
+}
+
 export async function validateUSTicker(ticker, apiKey, model) {
   model = model || 'gemini-2.5-flash'
   const prompt = 'You are a financial data assistant. Validate if "' + ticker + '" is a valid US stock ticker symbol listed on NYSE, NASDAQ, or similar US exchanges.\n'
@@ -69,7 +100,7 @@ export async function fetchMarketBriefing(apiKey, model) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 1024 },
+      generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
       tools: [{ googleSearch: {} }],
     }),
   })
@@ -77,12 +108,15 @@ export async function fetchMarketBriefing(apiKey, model) {
   const data = await res.json()
   if (!res.ok) throw new Error(data.error?.message || 'Gemini API error')
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+  const text = collectText(data)
+  if (!text.trim()) throw new Error('시장 리포트 응답이 비어 있습니다.')
   try {
     return parseJSON(text)
   } catch (_) {
-    const match = text.match(/\{[\s\S]*\}/)
-    if (match) return JSON.parse(match[0])
+    const json = extractJSON(text, '{', '}')
+    if (json) {
+      try { return JSON.parse(json) } catch (_) { /* fall through */ }
+    }
     throw new Error('시장 리포트 파싱 실패')
   }
 }
@@ -118,7 +152,7 @@ export async function fetchBriefings(stocks, apiKey, model) {
   const data = await res.json()
   if (!res.ok) throw new Error(data.error?.message || 'Gemini API error')
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]'
+  const text = collectText(data) || '[]'
 
   try {
     const parsed = parseJSON(text)
@@ -126,9 +160,9 @@ export async function fetchBriefings(stocks, apiKey, model) {
     if (parsed && typeof parsed === 'object') return [parsed]
     return []
   } catch (_) {
-    const match = text.match(/\[[\s\S]*\]/)
-    if (match) {
-      try { return JSON.parse(match[0]) } catch (_) { return [] }
+    const json = extractJSON(text, '[', ']')
+    if (json) {
+      try { return JSON.parse(json) } catch (_) { return [] }
     }
     return []
   }
