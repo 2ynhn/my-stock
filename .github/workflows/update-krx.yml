@@ -1,0 +1,64 @@
+name: Update KRX Stock List
+
+on:
+  schedule:
+    # 매일 오전 7시 (KST) = 22:00 UTC 전날
+    - cron: '0 22 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-krx:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pykrx
+        run: pip install pykrx
+
+      - name: Fetch KRX full listing and build JSON
+        run: |
+          python3 << 'EOF'
+          import json
+          from pykrx import stock
+
+          result = []
+
+          # KOSPI 전종목 (.KS)
+          for ticker in stock.get_market_ticker_list(market="KOSPI"):
+              name = stock.get_market_ticker_name(ticker)
+              if name:
+                  result.append({"ticker": f"{ticker}.KS", "name": name, "market": "KR"})
+
+          # KOSDAQ 전종목 (.KQ)
+          for ticker in stock.get_market_ticker_list(market="KOSDAQ"):
+              name = stock.get_market_ticker_name(ticker)
+              if name:
+                  result.append({"ticker": f"{ticker}.KQ", "name": name, "market": "KR"})
+
+          result.sort(key=lambda x: x["name"])
+
+          with open("public/krx-stocks.json", "w", encoding="utf-8") as f:
+              json.dump(result, f, ensure_ascii=False, indent=2)
+
+          ks = sum(1 for x in result if x["ticker"].endswith(".KS"))
+          kq = sum(1 for x in result if x["ticker"].endswith(".KQ"))
+          print(f"Total: {len(result)} (.KS: {ks}, .KQ: {kq})")
+          EOF
+
+      - name: Commit updated krx-stocks.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/krx-stocks.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: KRX 전종목 데이터 자동 업데이트 $(date -u +'%Y-%m-%d')"
+            git push
+          fi

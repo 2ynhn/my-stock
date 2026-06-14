@@ -4,6 +4,7 @@ import Settings from './components/Settings.jsx'
 import SearchBar from './components/SearchBar.jsx'
 import SummaryCards from './components/SummaryCards.jsx'
 import StockCard from './components/StockCard.jsx'
+import MarketReport from './components/MarketReport.jsx'
 import useStocks from './hooks/useStocks.js'
 import { fetchBriefings } from './utils/gemini.js'
 import { getCachedBriefings, cacheBriefing, getSlotLabel } from './utils/briefingCache.js'
@@ -166,6 +167,8 @@ export default function App() {
         ) : (
           <>
             <SummaryCards total={stocks.length} up={upCount} down={downCount} />
+
+            <MarketReport apiKeys={apiKeys} />
 
             {canEdit ? (
               <div className="mb-4">
