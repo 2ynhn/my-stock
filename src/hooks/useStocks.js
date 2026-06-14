@@ -5,6 +5,7 @@ export default function useStocks(apiKeys) {
   const [stocks, setStocks] = useState([])
   const [gistId, setGistId] = useState(() => localStorage.getItem('gistId') || null)
   const [initialized, setInitialized] = useState(false)
+  const [gistError, setGistError] = useState(null)
   const saveTimerRef = useRef(null)
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export default function useStocks(apiKeys) {
         setStocks(loaded)
       } catch (e) {
         console.error('Failed to init gist:', e)
+        setGistError(e.message || 'GitHub Gist 연결 실패')
       } finally {
         setInitialized(true)
       }
@@ -55,5 +57,5 @@ export default function useStocks(apiKeys) {
     })
   }
 
-  return { stocks, addStock, removeStock, gistId, initialized }
+  return { stocks, addStock, removeStock, gistId, initialized, gistError }
 }

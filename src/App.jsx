@@ -23,7 +23,7 @@ export default function App() {
 
   const hasKeys = apiKeys.githubPat && apiKeys.geminiApiKey
 
-  const { stocks, addStock, removeStock } = useStocks(apiKeys)
+  const { stocks, addStock, removeStock, gistError } = useStocks(apiKeys)
 
   const loadBriefings = useCallback(async (stockList) => {
     if (!stockList.length || !apiKeys.geminiApiKey) return
@@ -130,10 +130,13 @@ export default function App() {
               <SearchBar onAdd={handleAddStock} existingTickers={stocks.map(s => s.ticker)} apiKeys={apiKeys} />
             </div>
 
-            {error && (
+            {(error || gistError) && (
               <div className="bg-red-900/40 border border-red-700 text-red-300 rounded-lg px-4 py-3 mb-6 text-sm">
-                {error}
+                {gistError || error}
                 <button onClick={() => setError(null)} className="ml-4 underline">닫기</button>
+                {gistError && (
+                  <button onClick={() => setShowSettings(true)} className="ml-4 underline">설정 열기</button>
+                )}
               </div>
             )}
 
