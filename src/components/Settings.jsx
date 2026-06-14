@@ -4,7 +4,7 @@ import { X } from 'lucide-react'
 export default function Settings({ initialKeys, onSave, onCancel }) {
   const [githubPat, setGithubPat] = useState(initialKeys.githubPat || '')
   const [geminiApiKey, setGeminiApiKey] = useState(initialKeys.geminiApiKey || '')
-  const [geminiModel, setGeminiModel] = useState(initialKeys.geminiModel || 'gemini-2.5-flash-preview-05-20')
+  const [geminiModel, setGeminiModel] = useState(initialKeys.geminiModel || 'gemini-2.0-flash-001')
 
   const handleSave = () => {
     localStorage.setItem('githubPat', githubPat)
@@ -60,8 +60,8 @@ export default function Settings({ initialKeys, onSave, onCancel }) {
               onChange={e => setGeminiModel(e.target.value)}
               className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="gemini-2.5-flash-preview-05-20">gemini-2.5-flash (기본, 빠름)</option>
-              <option value="gemini-2.5-pro-preview-06-05">gemini-2.5-pro (고품질)</option>
+              <option value="gemini-2.0-flash-001">gemini-2.0-flash (기본, 빠름)</option>
+              <option value="gemini-1.5-pro-001">gemini-1.5-pro (고품질)</option>
             </select>
           </div>
         </div>
