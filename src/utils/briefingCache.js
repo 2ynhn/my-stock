@@ -14,12 +14,10 @@ export function getCachedBriefings(tickers) {
     const key = `briefing_${ticker}`
     const stored = localStorage.getItem(key)
     if (stored) {
-      try {
-        const data = JSON.parse(stored)
-        if (data.date === today && data.slot === slot) {
-          cached[ticker] = data
-        }
-      } catch {}
+      const data = JSON.parse(stored)
+      if (data.date === today && data.slot === slot) {
+        cached[ticker] = data
+      }
     }
   }
   return cached
