@@ -84,3 +84,13 @@ jobs:
             git commit -m "chore: KRX 전종목 데이터 자동 업데이트 $(date -u +'%Y-%m-%d')"
             git push
           fi
+
+      # 봇 커밋은 deploy.yml 을 트리거하지 못하므로 여기서 직접 빌드/배포한다
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci && npm run build
+      - uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
