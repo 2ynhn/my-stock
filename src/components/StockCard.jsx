@@ -1,11 +1,11 @@
 import React from 'react'
-import { X, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { X, TrendingUp, TrendingDown, Minus, Star } from 'lucide-react'
 
 function SkeletonLine({ width = 'w-full', height = 'h-4' }) {
   return <div className={`${width} ${height} bg-slate-200 rounded animate-pulse`} />
 }
 
-export default function StockCard({ stock, briefingData, isLoading, onRemove }) {
+export default function StockCard({ stock, briefingData, isLoading, onRemove, isFavorite, onToggleFavorite }) {
   const isKR = stock.market === 'KR'
 
   const getRiseColor = (rate) => {
@@ -52,7 +52,7 @@ export default function StockCard({ stock, briefingData, isLoading, onRemove }) 
     : Minus
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-4 hover:border-slate-300 hover:shadow-sm transition-all">
+    <div className={`bg-white border rounded-xl p-5 flex flex-col gap-4 hover:shadow-sm transition-all ${isFavorite ? 'border-amber-300 ring-1 ring-amber-200' : 'border-slate-200 hover:border-slate-300'}`}>
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -64,14 +64,25 @@ export default function StockCard({ stock, briefingData, isLoading, onRemove }) 
           </div>
           <span className="text-xs text-slate-400">{stock.ticker}</span>
         </div>
-        {onRemove && (
-          <button
-            onClick={onRemove}
-            className="text-slate-300 hover:text-red-400 transition-colors ml-2 mt-0.5 flex-shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+        <div className="flex items-center gap-1 ml-2 mt-0.5 flex-shrink-0">
+          {onToggleFavorite && (
+            <button
+              onClick={onToggleFavorite}
+              className={`transition-colors ${isFavorite ? 'text-amber-400 hover:text-amber-500' : 'text-slate-300 hover:text-amber-400'}`}
+              title={isFavorite ? '즐겨찾기 해제' : '즐겨찾기'}
+            >
+              <Star className="w-4 h-4" fill={isFavorite ? 'currentColor' : 'none'} />
+            </button>
+          )}
+          {onRemove && (
+            <button
+              onClick={onRemove}
+              className="text-slate-300 hover:text-red-400 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Price */}

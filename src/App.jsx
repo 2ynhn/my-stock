@@ -27,6 +27,17 @@ export default function App() {
   const [briefings, setBriefings] = useState({})
   const [loadingTickers, setLoadingTickers] = useState([])
   const [error, setError] = useState(null)
+  const [favorites, setFavorites] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('favorites') || '[]') } catch { return [] }
+  })
+
+  const toggleFavorite = (ticker) => {
+    setFavorites(prev => {
+      const next = prev.includes(ticker) ? prev.filter(t => t !== ticker) : [...prev, ticker]
+      localStorage.setItem('favorites', JSON.stringify(next))
+      return next
+    })
+  }
 
   const hasKeys = apiKeys.githubPat && apiKeys.geminiApiKey
   const canEdit = activeProfile === myProfile
@@ -97,6 +108,10 @@ export default function App() {
   }
 
   const sortedStocks = [...stocks].sort((a, b) => {
+    // 즐겨찾기는 항상 상위
+    const af = favorites.includes(a.ticker) ? 0 : 1
+    const bf = favorites.includes(b.ticker) ? 0 : 1
+    if (af !== bf) return af - bf
     if (sortMode === 'alpha') {
       return a.name.localeCompare(b.name, 'ko')
     }
@@ -224,6 +239,8 @@ export default function App() {
                     briefingData={briefings[stock.ticker]}
                     isLoading={loadingTickers.includes(stock.ticker)}
                     onRemove={canEdit ? () => handleRemoveStock(stock.ticker) : null}
+                    isFavorite={favorites.includes(stock.ticker)}
+                    onToggleFavorite={() => toggleFavorite(stock.ticker)}
                   />
                 ))}
               </div>
