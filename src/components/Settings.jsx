@@ -1,10 +1,43 @@
 import React, { useState } from 'react'
-import { X } from 'lucide-react'
+import { X, RefreshCw } from 'lucide-react'
+import { listModels } from '../utils/gemini.js'
+
+const FALLBACK_MODELS = [
+  { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash (기본, 빠름)' },
+  { id: 'gemini-2.5-pro', label: 'gemini-2.5-pro (고품질)' },
+]
 
 export default function Settings({ initialKeys, onSave, onCancel }) {
   const [githubPat, setGithubPat] = useState(initialKeys.githubPat || '')
   const [geminiApiKey, setGeminiApiKey] = useState(initialKeys.geminiApiKey || '')
-  const [geminiModel, setGeminiModel] = useState(initialKeys.geminiModel || 'gemini-2.0-flash-001')
+  const [geminiModel, setGeminiModel] = useState(initialKeys.geminiModel || 'gemini-2.5-flash')
+  const [models, setModels] = useState(FALLBACK_MODELS)
+  const [loadingModels, setLoadingModels] = useState(false)
+  const [modelError, setModelError] = useState(null)
+
+  const handleLoadModels = async () => {
+    if (!geminiApiKey) {
+      setModelError('먼저 Gemini API 키를 입력해주세요.')
+      return
+    }
+    setModelError(null)
+    setLoadingModels(true)
+    try {
+      const list = await listModels(geminiApiKey)
+      if (list.length > 0) {
+        setModels(list)
+        if (!list.find(m => m.id === geminiModel)) {
+          setGeminiModel(list[0].id)
+        }
+      } else {
+        setModelError('사용 가능한 모델이 없습니다.')
+      }
+    } catch (e) {
+      setModelError(e.message || '모델 목록을 불러오지 못했습니다.')
+    } finally {
+      setLoadingModels(false)
+    }
+  }
 
   const handleSave = () => {
     localStorage.setItem('githubPat', githubPat)
@@ -52,17 +85,29 @@ export default function Settings({ initialKeys, onSave, onCancel }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
-              Gemini 모델
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-medium text-slate-300">
+                Gemini 모델
+              </label>
+              <button
+                onClick={handleLoadModels}
+                disabled={loadingModels}
+                className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 disabled:text-slate-500 transition-colors"
+              >
+                <RefreshCw className={`w-3 h-3 ${loadingModels ? 'animate-spin' : ''}`} />
+                사용 가능한 모델 불러오기
+              </button>
+            </div>
             <select
               value={geminiModel}
               onChange={e => setGeminiModel(e.target.value)}
               className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="gemini-2.0-flash-001">gemini-2.0-flash (기본, 빠름)</option>
-              <option value="gemini-1.5-pro-001">gemini-1.5-pro (고품질)</option>
+              {models.map(m => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
             </select>
+            {modelError && <p className="text-red-400 text-xs mt-1">{modelError}</p>}
           </div>
         </div>
 

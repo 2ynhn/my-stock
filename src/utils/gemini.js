@@ -1,5 +1,17 @@
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models'
 
+export async function listModels(apiKey) {
+  const res = await fetch(`${GEMINI_BASE}?key=${apiKey}&pageSize=200`)
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error?.message || 'Gemini API error')
+  return (data.models || [])
+    .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+    .map(m => ({
+      id: m.name.replace(/^models\//, ''),
+      label: m.displayName || m.name.replace(/^models\//, ''),
+    }))
+}
+
 function parseJSON(text) {
   const cleaned = text
     .replace(/^```json\s*/i, '')
@@ -9,7 +21,7 @@ function parseJSON(text) {
   return JSON.parse(cleaned)
 }
 
-export async function validateUSTicker(ticker, apiKey, model = 'gemini-2.0-flash') {
+export async function validateUSTicker(ticker, apiKey, model = 'gemini-2.5-flash') {
   const prompt = `You are a financial data assistant. Validate if "${ticker}" is a valid US stock ticker symbol listed on NYSE, NASDAQ, or similar US exchanges.
 If valid, respond with ONLY this JSON (no markdown):
 {"valid": true, "ticker": "${ticker}", "name": "Company Name"}
@@ -36,7 +48,7 @@ Respond with ONLY the JSON object, no explanation.`
   return parsed
 }
 
-export async function fetchBriefings(stocks, apiKey, model = 'gemini-2.0-flash') {
+export async function fetchBriefings(stocks, apiKey, model = 'gemini-2.5-flash') {
   const stockList = stocks.map(s => `${s.name} (${s.ticker}, ${s.market === 'KR' ? 'Korean' : 'US'} market)`).join('\n')
 
   const now = new Date().toISOString()
