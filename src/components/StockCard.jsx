@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, TrendingUp, TrendingDown, Minus, Star, ChevronDown, ChevronUp } from 'lucide-react'
+import { Trash2, TrendingUp, TrendingDown, Minus, Star, ChevronDown, ChevronUp } from 'lucide-react'
 
 function SkeletonLine({ width = 'w-full', height = 'h-4' }) {
   return <div className={`${width} ${height} bg-slate-200 rounded animate-pulse`} />
@@ -8,6 +8,7 @@ function SkeletonLine({ width = 'w-full', height = 'h-4' }) {
 export default function StockCard({ stock, briefingData, isLoading, onRemove, isFavorite, onToggleFavorite }) {
   const isKR = stock.market === 'KR'
   const [expanded, setExpanded] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const getRiseColor = (rate) => {
     if (rate === undefined || rate === null) return 'text-slate-400'
@@ -93,16 +94,6 @@ export default function StockCard({ stock, briefingData, isLoading, onRemove, is
               <Star className="w-4 h-4" fill={isFavorite ? 'currentColor' : 'none'} />
             </span>
           )}
-          {onRemove && (
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(e) => { e.stopPropagation(); onRemove() }}
-              className="text-slate-300 hover:text-red-400 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </span>
-          )}
           {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
       </button>
@@ -155,6 +146,37 @@ export default function StockCard({ stock, briefingData, isLoading, onRemove, is
           {briefingData?.lastUpdated && (
             <div className="text-xs text-slate-400 border-t border-slate-100 pt-3">
               {briefingData.lastUpdated}
+            </div>
+          )}
+
+          {/* Delete (with confirm) — bottom right */}
+          {onRemove && (
+            <div className="flex justify-end pt-1">
+              {confirmDelete ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-slate-500">삭제할까요?</span>
+                  <button
+                    onClick={() => { setConfirmDelete(false); onRemove() }}
+                    className="px-2.5 py-1 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors"
+                  >
+                    삭제
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                  >
+                    취소
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="flex items-center gap-1 text-sm text-slate-400 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  삭제
+                </button>
+              )}
             </div>
           )}
         </div>
