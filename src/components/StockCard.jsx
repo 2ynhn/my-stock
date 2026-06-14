@@ -2,7 +2,7 @@ import React from 'react'
 import { X, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 function SkeletonLine({ width = 'w-full', height = 'h-4' }) {
-  return <div className={`${width} ${height} bg-slate-700 rounded animate-pulse`} />
+  return <div className={`${width} ${height} bg-slate-200 rounded animate-pulse`} />
 }
 
 export default function StockCard({ stock, briefingData, isLoading, onRemove }) {
@@ -10,15 +10,15 @@ export default function StockCard({ stock, briefingData, isLoading, onRemove }) 
 
   const getRiseColor = (rate) => {
     if (rate === undefined || rate === null) return 'text-slate-400'
-    if (rate > 0) return isKR ? 'text-red-400' : 'text-green-400'
-    if (rate < 0) return isKR ? 'text-blue-400' : 'text-red-400'
-    return 'text-slate-400'
+    if (rate > 0) return isKR ? 'text-red-500' : 'text-green-600'
+    if (rate < 0) return isKR ? 'text-blue-500' : 'text-red-500'
+    return 'text-slate-500'
   }
 
   const getRiseBg = (rate) => {
     if (rate === undefined || rate === null) return ''
-    if (rate > 0) return isKR ? 'bg-red-500/10' : 'bg-green-500/10'
-    if (rate < 0) return isKR ? 'bg-blue-500/10' : 'bg-red-500/10'
+    if (rate > 0) return isKR ? 'bg-red-50' : 'bg-green-50'
+    if (rate < 0) return isKR ? 'bg-blue-50' : 'bg-red-50'
     return ''
   }
 
@@ -52,21 +52,21 @@ export default function StockCard({ stock, briefingData, isLoading, onRemove }) 
     : Minus
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 flex flex-col gap-4 hover:border-slate-600 transition-colors">
+    <div className="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-4 hover:border-slate-300 hover:shadow-sm transition-all">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-white">{stock.name}</span>
-            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${isKR ? 'bg-orange-500/20 text-orange-400' : 'bg-sky-500/20 text-sky-400'}`}>
+            <span className="font-semibold text-slate-900">{stock.name}</span>
+            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${isKR ? 'bg-orange-100 text-orange-600' : 'bg-sky-100 text-sky-600'}`}>
               {isKR ? '국내' : '해외'}
             </span>
           </div>
-          <span className="text-xs text-slate-500">{stock.ticker}</span>
+          <span className="text-xs text-slate-400">{stock.ticker}</span>
         </div>
         <button
           onClick={onRemove}
-          className="text-slate-600 hover:text-red-400 transition-colors ml-2 mt-0.5 flex-shrink-0"
+          className="text-slate-300 hover:text-red-400 transition-colors ml-2 mt-0.5 flex-shrink-0"
         >
           <X className="w-4 h-4" />
         </button>
@@ -90,7 +90,7 @@ export default function StockCard({ stock, briefingData, isLoading, onRemove }) 
           </div>
         </div>
       ) : (
-        <div className="text-slate-500 text-sm">가격 정보 없음</div>
+        <div className="text-slate-400 text-sm">가격 정보 없음</div>
       )}
 
       {/* Briefing */}
@@ -101,21 +101,21 @@ export default function StockCard({ stock, briefingData, isLoading, onRemove }) 
           <SkeletonLine width="w-4/5" />
         </div>
       ) : briefingData?.briefing && briefingData.briefing.length > 0 ? (
-        <ul className="space-y-1.5">
+        <ul className="space-y-2">
           {briefingData.briefing.map((line, i) => (
-            <li key={i} className="flex gap-2 text-xs text-slate-300">
-              <span className="text-blue-400 mt-0.5 flex-shrink-0">•</span>
+            <li key={i} className="flex gap-2 text-base text-slate-700" style={{ fontSize: '1rem' }}>
+              <span className="text-blue-500 mt-0.5 flex-shrink-0">•</span>
               <span>{line}</span>
             </li>
           ))}
         </ul>
       ) : !isLoading && (
-        <p className="text-xs text-slate-500">브리핑 정보 없음</p>
+        <p className="text-sm text-slate-400">브리핑 정보 없음</p>
       )}
 
       {/* Slot label */}
       {briefingData?.lastUpdated && (
-        <div className="text-xs text-slate-600 border-t border-slate-700 pt-3">
+        <div className="text-xs text-slate-400 border-t border-slate-100 pt-3">
           {briefingData.lastUpdated}
         </div>
       )}

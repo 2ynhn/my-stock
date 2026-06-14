@@ -47,18 +47,18 @@ export default function Settings({ initialKeys, onSave, onCancel }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-6">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-xl">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-white">⚙️ 설정</h2>
-          <button onClick={onCancel} className="text-slate-400 hover:text-white transition-colors">
+          <h2 className="text-lg font-semibold text-slate-900">⚙️ 설정</h2>
+          <button onClick={onCancel} className="text-slate-400 hover:text-slate-700 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
               GitHub Personal Access Token
             </label>
             <input
@@ -66,13 +66,13 @@ export default function Settings({ initialKeys, onSave, onCancel }) {
               value={githubPat}
               onChange={e => setGithubPat(e.target.value)}
               placeholder="ghp_..."
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <p className="text-xs text-slate-500 mt-1">Gist 읽기/쓰기 권한이 필요합니다.</p>
+            <p className="text-xs text-slate-400 mt-1">Gist 읽기/쓰기 권한이 필요합니다.</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
               Gemini API Key
             </label>
             <input
@@ -80,19 +80,19 @@ export default function Settings({ initialKeys, onSave, onCancel }) {
               value={geminiApiKey}
               onChange={e => setGeminiApiKey(e.target.value)}
               placeholder="AIza..."
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-medium text-slate-300">
+              <label className="block text-sm font-medium text-slate-700">
                 Gemini 모델
               </label>
               <button
                 onClick={handleLoadModels}
                 disabled={loadingModels}
-                className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 disabled:text-slate-500 transition-colors"
+                className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 disabled:text-slate-400 transition-colors"
               >
                 <RefreshCw className={`w-3 h-3 ${loadingModels ? 'animate-spin' : ''}`} />
                 사용 가능한 모델 불러오기
@@ -101,20 +101,20 @@ export default function Settings({ initialKeys, onSave, onCancel }) {
             <select
               value={geminiModel}
               onChange={e => setGeminiModel(e.target.value)}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {models.map(m => (
                 <option key={m.id} value={m.id}>{m.label}</option>
               ))}
             </select>
-            {modelError && <p className="text-red-400 text-xs mt-1">{modelError}</p>}
+            {modelError && <p className="text-red-500 text-xs mt-1">{modelError}</p>}
           </div>
         </div>
 
         <div className="flex gap-3 mt-7">
           <button
             onClick={onCancel}
-            className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2.5 rounded-lg text-sm font-medium transition-colors"
+            className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-lg text-sm font-medium transition-colors"
           >
             취소
           </button>

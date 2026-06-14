@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Settings2 } from 'lucide-react'
+import { Settings2, ArrowUpDown } from 'lucide-react'
 import Settings from './components/Settings.jsx'
 import SearchBar from './components/SearchBar.jsx'
 import SummaryCards from './components/SummaryCards.jsx'
@@ -10,6 +10,7 @@ import { getCachedBriefings, cacheBriefing, getSlotLabel } from './utils/briefin
 
 export default function App() {
   const [showSettings, setShowSettings] = useState(false)
+  const [sortMode, setSortMode] = useState(() => localStorage.getItem('sortMode') || 'recent')
   const [apiKeys, setApiKeys] = useState(() => {
     return {
       githubPat: localStorage.getItem('githubPat') || '',
@@ -78,6 +79,18 @@ export default function App() {
     })
   }
 
+  const handleSortChange = (mode) => {
+    setSortMode(mode)
+    localStorage.setItem('sortMode', mode)
+  }
+
+  const sortedStocks = [...stocks].sort((a, b) => {
+    if (sortMode === 'alpha') {
+      return a.name.localeCompare(b.name, 'ko')
+    }
+    return 0
+  })
+
   const upCount = stocks.filter(s => {
     const b = briefings[s.ticker]
     return b && b.changeRate > 0
@@ -89,29 +102,29 @@ export default function App() {
   }).length
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white">📈 나의 주식 브리핑</h1>
-            <p className="text-slate-400 text-sm mt-1">{getSlotLabel()}</p>
+            <h1 className="text-3xl font-bold text-slate-900">📈 나의 주식 브리핑</h1>
+            <p className="text-slate-500 text-sm mt-1">{getSlotLabel()}</p>
           </div>
           <button
             onClick={() => setShowSettings(true)}
-            className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 transition-colors"
+            className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 transition-colors shadow-sm"
             title="설정"
           >
-            <Settings2 className="w-5 h-5 text-slate-300" />
+            <Settings2 className="w-5 h-5 text-slate-600" />
           </button>
         </div>
 
         {!hasKeys ? (
           <div className="flex flex-col items-center justify-center py-24">
-            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-10 max-w-md w-full text-center">
+            <div className="bg-white border border-slate-200 rounded-2xl p-10 max-w-md w-full text-center shadow-sm">
               <div className="text-5xl mb-4">🔑</div>
-              <h2 className="text-xl font-semibold mb-2">API 키를 설정해주세요</h2>
-              <p className="text-slate-400 text-sm mb-6">
+              <h2 className="text-xl font-semibold mb-2 text-slate-800">API 키를 설정해주세요</h2>
+              <p className="text-slate-500 text-sm mb-6">
                 GitHub PAT와 Gemini API 키를 입력하면<br />주식 브리핑을 시작할 수 있습니다.
               </p>
               <button
@@ -126,12 +139,12 @@ export default function App() {
           <>
             <SummaryCards total={stocks.length} up={upCount} down={downCount} />
 
-            <div className="mb-8">
+            <div className="mb-4">
               <SearchBar onAdd={handleAddStock} existingTickers={stocks.map(s => s.ticker)} apiKeys={apiKeys} />
             </div>
 
             {(error || gistError) && (
-              <div className="bg-red-900/40 border border-red-700 text-red-300 rounded-lg px-4 py-3 mb-6 text-sm">
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-6 text-sm">
                 {gistError || error}
                 <button onClick={() => setError(null)} className="ml-4 underline">닫기</button>
                 {gistError && (
@@ -140,14 +153,33 @@ export default function App() {
               </div>
             )}
 
+            {stocks.length > 0 && (
+              <div className="flex items-center gap-2 mb-4">
+                <ArrowUpDown className="w-4 h-4 text-slate-400" />
+                <span className="text-sm text-slate-500">정렬:</span>
+                <button
+                  onClick={() => handleSortChange('recent')}
+                  className={`px-3 py-1 rounded-lg text-sm transition-colors ${sortMode === 'recent' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  최근 추가순
+                </button>
+                <button
+                  onClick={() => handleSortChange('alpha')}
+                  className={`px-3 py-1 rounded-lg text-sm transition-colors ${sortMode === 'alpha' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  ㄱㄴㄷ순
+                </button>
+              </div>
+            )}
+
             {stocks.length === 0 ? (
-              <div className="text-center py-16 text-slate-500">
+              <div className="text-center py-16 text-slate-400">
                 <div className="text-4xl mb-3">📊</div>
                 <p>관심 종목을 추가해보세요</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {stocks.map(stock => (
+                {sortedStocks.map(stock => (
                   <StockCard
                     key={stock.ticker}
                     stock={stock}
