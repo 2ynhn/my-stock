@@ -138,19 +138,19 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">📈 나의 주식 브리핑</h1>
-            <p className="text-slate-500 text-sm mt-1">{getSlotLabel()}</p>
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 truncate">📈 나의 주식 브리핑</h1>
+            <p className="text-slate-500 text-xs sm:text-sm mt-0.5">{getSlotLabel()}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {hasKeys && (
               <div className="flex bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
                 {PROFILES.map(p => (
                   <button
                     key={p.id}
                     onClick={() => setActiveProfile(p.id)}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activeProfile === p.id ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-800'}`}
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${activeProfile === p.id ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-800'}`}
                   >
                     {p.label}{p.id === myProfile ? ' (나)' : ''}
                   </button>
@@ -159,7 +159,7 @@ export default function App() {
             )}
             <button
               onClick={() => setShowSettings(true)}
-              className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 transition-colors shadow-sm"
+              className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 transition-colors shadow-sm flex-shrink-0"
               title="설정"
             >
               <Settings2 className="w-5 h-5 text-slate-600" />

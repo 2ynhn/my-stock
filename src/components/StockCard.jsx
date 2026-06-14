@@ -1,5 +1,5 @@
-import React from 'react'
-import { X, TrendingUp, TrendingDown, Minus, Star } from 'lucide-react'
+import React, { useState } from 'react'
+import { X, TrendingUp, TrendingDown, Minus, Star, ChevronDown, ChevronUp } from 'lucide-react'
 
 function SkeletonLine({ width = 'w-full', height = 'h-4' }) {
   return <div className={`${width} ${height} bg-slate-200 rounded animate-pulse`} />
@@ -7,6 +7,7 @@ function SkeletonLine({ width = 'w-full', height = 'h-4' }) {
 
 export default function StockCard({ stock, briefingData, isLoading, onRemove, isFavorite, onToggleFavorite }) {
   const isKR = stock.market === 'KR'
+  const [expanded, setExpanded] = useState(false)
 
   const getRiseColor = (rate) => {
     if (rate === undefined || rate === null) return 'text-slate-400'
@@ -52,84 +53,110 @@ export default function StockCard({ stock, briefingData, isLoading, onRemove, is
     : Minus
 
   return (
-    <div className={`bg-white border rounded-xl p-5 flex flex-col gap-4 hover:shadow-sm transition-all ${isFavorite ? 'border-amber-300 ring-1 ring-amber-200' : 'border-slate-200 hover:border-slate-300'}`}>
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-slate-900">{stock.name}</span>
-            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${isKR ? 'bg-orange-100 text-orange-600' : 'bg-sky-100 text-sky-600'}`}>
+    <div className={`bg-white border rounded-xl hover:shadow-sm transition-all ${isFavorite ? 'border-amber-300 ring-1 ring-amber-200' : 'border-slate-200 hover:border-slate-300'}`}>
+      {/* Header (always visible, click to toggle) */}
+      <button
+        type="button"
+        onClick={() => setExpanded(e => !e)}
+        className="w-full text-left px-5 py-4 flex items-center justify-between gap-2"
+      >
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="font-semibold text-slate-900 truncate">{stock.name}</span>
+            <span className={`text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${isKR ? 'bg-orange-100 text-orange-600' : 'bg-sky-100 text-sky-600'}`}>
               {isKR ? '국내' : '해외'}
             </span>
           </div>
           <span className="text-xs text-slate-400">{stock.ticker}</span>
         </div>
-        <div className="flex items-center gap-1 ml-2 mt-0.5 flex-shrink-0">
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Compact price preview when collapsed */}
+          {!expanded && briefingData && (
+            <div className={`text-right ${getRiseColor(briefingData.changeRate)}`}>
+              <div className="text-sm font-bold leading-tight">{formatPrice(briefingData.currentPrice, briefingData.currency)}</div>
+              <div className="text-xs leading-tight">{formatRate(briefingData.changeRate)}</div>
+            </div>
+          )}
+          {!expanded && isLoading && (
+            <div className="w-16"><SkeletonLine height="h-4" /></div>
+          )}
+
           {onToggleFavorite && (
-            <button
-              onClick={onToggleFavorite}
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); onToggleFavorite() }}
               className={`transition-colors ${isFavorite ? 'text-amber-400 hover:text-amber-500' : 'text-slate-300 hover:text-amber-400'}`}
               title={isFavorite ? '즐겨찾기 해제' : '즐겨찾기'}
             >
               <Star className="w-4 h-4" fill={isFavorite ? 'currentColor' : 'none'} />
-            </button>
+            </span>
           )}
           {onRemove && (
-            <button
-              onClick={onRemove}
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); onRemove() }}
               className="text-slate-300 hover:text-red-400 transition-colors"
             >
               <X className="w-4 h-4" />
-            </button>
+            </span>
           )}
+          {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
         </div>
-      </div>
+      </button>
 
-      {/* Price */}
-      {isLoading ? (
-        <div className="space-y-2">
-          <SkeletonLine width="w-3/4" height="h-7" />
-          <SkeletonLine width="w-1/2" height="h-4" />
-        </div>
-      ) : briefingData ? (
-        <div className={`rounded-lg p-3 ${getRiseBg(briefingData.changeRate)}`}>
-          <div className={`text-2xl font-bold ${getRiseColor(briefingData.changeRate)}`}>
-            {formatPrice(briefingData.currentPrice, briefingData.currency)}
-          </div>
-          <div className={`flex items-center gap-1.5 text-sm mt-1 ${getRiseColor(briefingData.changeRate)}`}>
-            <TrendIcon className="w-4 h-4" />
-            <span>{formatChange(briefingData.change, briefingData.currency)}</span>
-            <span>{formatRate(briefingData.changeRate)}</span>
-          </div>
-        </div>
-      ) : (
-        <div className="text-slate-400 text-sm">가격 정보 없음</div>
-      )}
+      {/* Expanded body */}
+      {expanded && (
+        <div className="px-5 pb-5 flex flex-col gap-4">
+          {/* Price */}
+          {isLoading ? (
+            <div className="space-y-2">
+              <SkeletonLine width="w-3/4" height="h-7" />
+              <SkeletonLine width="w-1/2" height="h-4" />
+            </div>
+          ) : briefingData ? (
+            <div className={`rounded-lg p-3 ${getRiseBg(briefingData.changeRate)}`}>
+              <div className={`text-2xl font-bold ${getRiseColor(briefingData.changeRate)}`}>
+                {formatPrice(briefingData.currentPrice, briefingData.currency)}
+              </div>
+              <div className={`flex items-center gap-1.5 text-sm mt-1 ${getRiseColor(briefingData.changeRate)}`}>
+                <TrendIcon className="w-4 h-4" />
+                <span>{formatChange(briefingData.change, briefingData.currency)}</span>
+                <span>{formatRate(briefingData.changeRate)}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-slate-400 text-sm">가격 정보 없음</div>
+          )}
 
-      {/* Briefing */}
-      {isLoading ? (
-        <div className="space-y-2">
-          <SkeletonLine />
-          <SkeletonLine width="w-5/6" />
-          <SkeletonLine width="w-4/5" />
-        </div>
-      ) : briefingData?.briefing && briefingData.briefing.length > 0 ? (
-        <ul className="space-y-2">
-          {briefingData.briefing.map((line, i) => (
-            <li key={i} className="flex gap-2 text-base text-slate-700" style={{ fontSize: '1rem' }}>
-              <span className="text-blue-500 mt-0.5 flex-shrink-0">•</span>
-              <span>{line}</span>
-            </li>
-          ))}
-        </ul>
-      ) : !isLoading && (
-        <p className="text-sm text-slate-400">브리핑 정보 없음</p>
-      )}
+          {/* Briefing */}
+          {isLoading ? (
+            <div className="space-y-2">
+              <SkeletonLine />
+              <SkeletonLine width="w-5/6" />
+              <SkeletonLine width="w-4/5" />
+            </div>
+          ) : briefingData?.briefing && briefingData.briefing.length > 0 ? (
+            <ul className="space-y-2">
+              {briefingData.briefing.map((line, i) => (
+                <li key={i} className="flex gap-2 text-slate-700" style={{ fontSize: '1rem' }}>
+                  <span className="text-blue-500 mt-0.5 flex-shrink-0">•</span>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-400">브리핑 정보 없음</p>
+          )}
 
-      {/* Slot label */}
-      {briefingData?.lastUpdated && (
-        <div className="text-xs text-slate-400 border-t border-slate-100 pt-3">
-          {briefingData.lastUpdated}
+          {/* Slot label */}
+          {briefingData?.lastUpdated && (
+            <div className="text-xs text-slate-400 border-t border-slate-100 pt-3">
+              {briefingData.lastUpdated}
+            </div>
+          )}
         </div>
       )}
     </div>
