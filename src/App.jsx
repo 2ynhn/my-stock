@@ -14,10 +14,14 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [sortMode, setSortMode] = useState(() => localStorage.getItem('sortMode') || 'recent')
   const [apiKeys, setApiKeys] = useState(() => {
+    const VALID_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash']
+    const storedModel = localStorage.getItem('geminiModel') || ''
+    const geminiModel = VALID_MODELS.some(m => storedModel.startsWith(m)) ? storedModel : 'gemini-2.5-flash'
+    if (geminiModel !== storedModel) localStorage.setItem('geminiModel', geminiModel)
     return {
       githubPat: localStorage.getItem('githubPat') || '',
       geminiApiKey: localStorage.getItem('geminiApiKey') || '',
-      geminiModel: localStorage.getItem('geminiModel') || 'gemini-2.5-flash',
+      geminiModel,
     }
   })
   // 이 기기의 소유자(편집 가능 프로필)

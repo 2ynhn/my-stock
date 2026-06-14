@@ -117,7 +117,7 @@ export async function fetchMarketBriefing(apiKey, model) {
     if (json) {
       try { return JSON.parse(json) } catch (_) { /* fall through */ }
     }
-    throw new Error('시장 리포트 파싱 실패')
+    throw new Error('시장 리포트 파싱 실패: ' + text.slice(0, 200))
   }
 }
 
