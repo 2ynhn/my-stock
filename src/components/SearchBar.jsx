@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Plus, Search } from 'lucide-react'
-import { validateUSTicker } from '../utils/gemini.js'
+import { validateUSTicker, validateKRStock } from '../utils/gemini.js'
 
 export default function SearchBar({ onAdd, existingTickers, apiKeys }) {
   const [mode, setMode] = useState('KR')
@@ -55,23 +55,31 @@ export default function SearchBar({ onAdd, existingTickers, apiKeys }) {
     setAddError(null)
     if (mode === 'KR') {
       const q = query.trim().toLowerCase()
-      const target = selected
+      if (!q) {
+        setAddError('종목명을 입력해주세요.')
+        return
+      }
+      // 1) 번들 목록에서 우선 매칭
+      let target = selected
         || krStocks.find(s => s.name.toLowerCase() === q || s.ticker.toLowerCase() === q)
         || suggestions[0]
-      if (!target) {
-        setAddError('목록에서 종목을 선택해주세요.')
-        return
-      }
-      if (existingTickers.includes(target.ticker)) {
-        setAddError('이미 추가된 종목입니다.')
-        return
-      }
+
       setIsAdding(true)
       try {
-        await onAdd(target)
+        // 2) 목록에 없으면 Gemini로 실시간 조회
+        if (!target) {
+          target = await validateKRStock(query.trim(), apiKeys.geminiApiKey, apiKeys.geminiModel)
+        }
+        if (existingTickers.includes(target.ticker)) {
+          setAddError('이미 추가된 종목입니다.')
+          return
+        }
+        await onAdd({ ticker: target.ticker, name: target.name, market: 'KR' })
         setQuery('')
         setSelected(null)
         setSuggestions([])
+      } catch (e) {
+        setAddError(e.message || '종목을 찾을 수 없습니다.')
       } finally {
         setIsAdding(false)
       }
@@ -129,7 +137,7 @@ export default function SearchBar({ onAdd, existingTickers, apiKeys }) {
             value={query}
             onChange={e => { setQuery(e.target.value); setSelected(null) }}
             onKeyDown={handleKeyDown}
-            placeholder={mode === 'KR' ? '종목명 또는 티커 검색...' : '티커 입력 (예: AAPL, TSLA)'}
+            placeholder={mode === 'KR' ? '종목명 검색 (예: 두산퓨얼셀, KODEX 200)' : '티커 입력 (예: AAPL, TSLA)'}
             className="w-full bg-slate-50 border border-slate-300 rounded-lg pl-9 pr-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {suggestions.length > 0 && (

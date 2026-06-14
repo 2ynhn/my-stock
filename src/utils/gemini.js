@@ -48,6 +48,37 @@ Respond with ONLY the JSON object, no explanation.`
   return parsed
 }
 
+export async function validateKRStock(queryText, apiKey, model = 'gemini-2.5-flash') {
+  const prompt = `You are a Korean stock market data assistant. The user is searching for "${queryText}".
+Identify the matching Korean-listed stock or ETF (KOSPI or KOSDAQ).
+Determine its 6-digit Korea stock code and append the correct suffix: ".KS" for KOSPI-listed, ".KQ" for KOSDAQ-listed.
+Examples: 삼성전자 -> 005930.KS, 두산퓨얼셀 -> 336260.KS, KODEX 200 -> 069500.KS, 에코프로비엠 -> 247540.KQ.
+If you find a valid match, respond with ONLY this JSON (no markdown):
+{"valid": true, "ticker": "XXXXXX.KS", "name": "정확한 종목명"}
+If no valid Korean stock matches:
+{"valid": false, "ticker": "", "name": ""}
+Respond with ONLY the JSON object, no explanation.`
+
+  const res = await fetch(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0, maxOutputTokens: 200 },
+      tools: [{ googleSearch: {} }],
+    }),
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error?.message || 'Gemini API error')
+
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  const parsed = parseJSON(text)
+
+  if (!parsed.valid || !parsed.ticker) throw new Error(`"${queryText}" 종목을 찾을 수 없습니다.`)
+  return { ticker: parsed.ticker, name: parsed.name || queryText, market: 'KR' }
+}
+
 export async function fetchBriefings(stocks, apiKey, model = 'gemini-2.5-flash') {
   const stockList = stocks.map(s => `${s.name} (${s.ticker}, ${s.market === 'KR' ? 'Korean' : 'US'} market)`).join('\n')
 
