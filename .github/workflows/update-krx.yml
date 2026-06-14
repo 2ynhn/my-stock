@@ -25,21 +25,48 @@ jobs:
         run: |
           python3 << 'EOF'
           import json
+          from datetime import datetime, timedelta
           from pykrx import stock
 
+          # 최근 영업일 탐색 (휴일/주말이면 빈 목록이 나올 수 있음)
+          def recent_business_day():
+              d = datetime.now()
+              for _ in range(10):
+                  ymd = d.strftime("%Y%m%d")
+                  try:
+                      if stock.get_market_ticker_list(ymd, market="KOSPI"):
+                          return ymd
+                  except Exception:
+                      pass
+                  d -= timedelta(days=1)
+              return datetime.now().strftime("%Y%m%d")
+
+          day = recent_business_day()
+          print("기준일:", day)
+
           result = []
+          seen = set()
+
+          def add(ticker, name, suffix):
+              key = ticker + suffix
+              if name and key not in seen:
+                  seen.add(key)
+                  result.append({"ticker": key, "name": name.strip(), "market": "KR"})
 
           # KOSPI 전종목 (.KS)
-          for ticker in stock.get_market_ticker_list(market="KOSPI"):
-              name = stock.get_market_ticker_name(ticker)
-              if name:
-                  result.append({"ticker": f"{ticker}.KS", "name": name, "market": "KR"})
+          for t in stock.get_market_ticker_list(day, market="KOSPI"):
+              add(t, stock.get_market_ticker_name(t), ".KS")
 
           # KOSDAQ 전종목 (.KQ)
-          for ticker in stock.get_market_ticker_list(market="KOSDAQ"):
-              name = stock.get_market_ticker_name(ticker)
-              if name:
-                  result.append({"ticker": f"{ticker}.KQ", "name": name, "market": "KR"})
+          for t in stock.get_market_ticker_list(day, market="KOSDAQ"):
+              add(t, stock.get_market_ticker_name(t), ".KQ")
+
+          # ETF (KODEX, TIGER 등 — KOSPI 상장이므로 .KS)
+          try:
+              for t in stock.get_etf_ticker_list(day):
+                  add(t, stock.get_etf_ticker_name(t), ".KS")
+          except Exception as e:
+              print("ETF 수집 실패:", e)
 
           result.sort(key=lambda x: x["name"])
 
