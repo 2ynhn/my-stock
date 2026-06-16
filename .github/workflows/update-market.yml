@@ -1,0 +1,144 @@
+name: Update Market Report
+
+on:
+  schedule:
+    # 23:30 UTC = 08:30 KST 다음날. 일~목(UTC) = 월~금(KST) 장 마감 후
+    - cron: '30 23 * * 0-4'
+  workflow_dispatch:
+
+jobs:
+  update-market:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install yfinance requests beautifulsoup4
+
+      - name: Fetch market data and build JSON
+        run: |
+          python3 << 'EOF'
+          import json, sys
+          from datetime import datetime, timezone, timedelta
+
+          try:
+              import yfinance as yf
+          except ImportError:
+              print("yfinance not installed")
+              sys.exit(1)
+
+          kst = timezone(timedelta(hours=9))
+          today = datetime.now(kst).strftime('%Y-%m-%d')
+
+          def get_ohlc(ticker):
+              try:
+                  data = yf.download(ticker, period='5d', interval='1d', progress=False, auto_adjust=True)
+                  data = data.dropna()
+                  if len(data) < 2:
+                      return None
+                  prev = float(data['Close'].iloc[-2])
+                  curr = float(data['Close'].iloc[-1])
+                  change = curr - prev
+                  rate = (change / prev) * 100
+                  return {'close': curr, 'change': change, 'rate': rate}
+              except Exception as e:
+                  print(f"Error fetching {ticker}: {e}")
+                  return None
+
+          def fmt_idx(d, decimals=2):
+              if not d:
+                  return '데이터 없음'
+              sign = '+' if d['change'] >= 0 else ''
+              return f"{d['close']:,.{decimals}f} ({sign}{d['change']:.{decimals}f}p, {sign}{d['rate']:.2f}%)"
+
+          def fmt_price(d, unit, decimals=2):
+              if not d:
+                  return '데이터 없음'
+              sign = '+' if d['change'] >= 0 else ''
+              return f"{d['close']:,.{decimals}f}{unit} ({sign}{d['rate']:.2f}%)"
+
+          kospi  = get_ohlc('^KS11')
+          kosdaq = get_ohlc('^KQ11')
+          sp500  = get_ohlc('^GSPC')
+          dow    = get_ohlc('^DJI')
+          nasdaq = get_ohlc('^IXIC')
+          usdkrw = get_ohlc('KRW=X')
+          oil    = get_ohlc('CL=F')
+
+          # US 시장 한 줄 요약
+          if sp500 and dow and nasdaq:
+              us_text = (
+                  f"S&P500 {fmt_idx(sp500)} / "
+                  f"나스닥 {fmt_idx(nasdaq)} / "
+                  f"다우 {fmt_idx(dow)}"
+              )
+          else:
+              us_text = '데이터 없음'
+
+          # 환율/원자재 한 줄 요약
+          if usdkrw and oil:
+              fx_text = f"원달러 {fmt_price(usdkrw, '원', 1)} / WTI {fmt_price(oil, '$')}"
+          elif usdkrw:
+              fx_text = f"원달러 {fmt_price(usdkrw, '원', 1)}"
+          else:
+              fx_text = '데이터 없음'
+
+          # 네이버 금융 뉴스 헤드라인 (실패해도 무시)
+          headline = None
+          try:
+              import requests
+              from bs4 import BeautifulSoup
+              url = "https://finance.naver.com/news/news_list.naver?mode=LSS2D&section_id=101&section_id2=258"
+              res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
+              soup = BeautifulSoup(res.text, 'html.parser')
+              for sel in ['.realtimeNewsList li .articleSubject a', '.newsList li dt a', 'dl.newsList dt a']:
+                  items = soup.select(sel)
+                  if items:
+                      headline = items[0].text.strip()
+                      break
+          except Exception as e:
+              print(f"News scraping failed: {e}")
+
+          result = {
+              "date": today,
+              "sections": [
+                  {"label": "코스피",    "text": fmt_idx(kospi,  2)},
+                  {"label": "코스닥",    "text": fmt_idx(kosdaq, 2)},
+                  {"label": "미국 시장", "text": us_text},
+                  {"label": "환율/원자재", "text": fx_text},
+                  {"label": "주요 뉴스", "text": headline or "네이버 금융 뉴스 수집 실패"},
+              ]
+          }
+
+          with open('public/market-today.json', 'w', encoding='utf-8') as f:
+              json.dump(result, f, ensure_ascii=False, indent=2)
+
+          print(json.dumps(result, ensure_ascii=False, indent=2))
+          EOF
+
+      - name: Commit updated market-today.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/market-today.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: 시장 리포트 자동 업데이트 $(date -u +'%Y-%m-%d')"
+            git push
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci && npm run build
+      - uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist

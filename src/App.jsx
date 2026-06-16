@@ -7,6 +7,7 @@ import StockCard from './components/StockCard.jsx'
 import MarketReport from './components/MarketReport.jsx'
 import useStocks from './hooks/useStocks.js'
 import { fetchBriefings } from './utils/gemini.js'
+import { fetchStockPrices } from './utils/stockPrice.js'
 import { getCachedBriefings, cacheBriefing, getSlotLabel } from './utils/briefingCache.js'
 import { PROFILES } from './utils/gist.js'
 
@@ -24,30 +25,39 @@ export default function App() {
       geminiModel,
     }
   })
-  // 이 기기의 소유자(편집 가능 프로필)
   const [myProfile, setMyProfile] = useState(() => localStorage.getItem('myProfile') || PROFILES[0].id)
-  // 현재 보고 있는 프로필
   const [activeProfile, setActiveProfile] = useState(() => localStorage.getItem('myProfile') || PROFILES[0].id)
+
+  // 가격과 브리핑을 분리된 상태로 관리
+  const [prices, setPrices] = useState({})
   const [briefings, setBriefings] = useState({})
+  const [priceLoading, setPriceLoading] = useState(false)
   const [loadingTickers, setLoadingTickers] = useState([])
   const [error, setError] = useState(null)
   const [favorites, setFavorites] = useState(() => {
     try { return JSON.parse(localStorage.getItem('favorites') || '[]') } catch { return [] }
   })
 
-  const toggleFavorite = (ticker) => {
-    setFavorites(prev => {
-      const next = prev.includes(ticker) ? prev.filter(t => t !== ticker) : [...prev, ticker]
-      localStorage.setItem('favorites', JSON.stringify(next))
-      return next
-    })
-  }
-
   const hasKeys = apiKeys.githubPat && apiKeys.geminiApiKey
   const canEdit = activeProfile === myProfile
 
   const { stocks, addStock, removeStock, gistError } = useStocks(apiKeys, activeProfile)
 
+  // 가격 조회 — Yahoo Finance, AI 없음
+  const loadPrices = useCallback(async (stockList) => {
+    if (!stockList.length) return
+    setPriceLoading(true)
+    try {
+      const data = await fetchStockPrices(stockList)
+      setPrices(data)
+    } catch (e) {
+      console.warn('가격 조회 실패:', e)
+    } finally {
+      setPriceLoading(false)
+    }
+  }, [])
+
+  // 브리핑 텍스트 조회 — Gemini (텍스트만, 가격 없음)
   const loadBriefings = useCallback(async (stockList) => {
     if (!stockList.length || !apiKeys.geminiApiKey) return
 
@@ -78,6 +88,12 @@ export default function App() {
   }, [apiKeys.geminiApiKey, apiKeys.geminiModel])
 
   useEffect(() => {
+    if (stocks.length > 0) {
+      loadPrices(stocks)
+    }
+  }, [stocks])
+
+  useEffect(() => {
     if (stocks.length > 0 && apiKeys.geminiApiKey) {
       loadBriefings(stocks)
     }
@@ -93,17 +109,10 @@ export default function App() {
     setShowSettings(false)
   }
 
-  const handleAddStock = async (stock) => {
-    await addStock(stock)
-  }
-
   const handleRemoveStock = async (ticker) => {
     await removeStock(ticker)
-    setBriefings(prev => {
-      const next = { ...prev }
-      delete next[ticker]
-      return next
-    })
+    setBriefings(prev => { const n = { ...prev }; delete n[ticker]; return n })
+    setPrices(prev => { const n = { ...prev }; delete n[ticker]; return n })
   }
 
   const handleSortChange = (mode) => {
@@ -111,28 +120,35 @@ export default function App() {
     localStorage.setItem('sortMode', mode)
   }
 
+  const toggleFavorite = (ticker) => {
+    setFavorites(prev => {
+      const next = prev.includes(ticker) ? prev.filter(t => t !== ticker) : [...prev, ticker]
+      localStorage.setItem('favorites', JSON.stringify(next))
+      return next
+    })
+  }
+
   const sortedStocks = [...stocks].sort((a, b) => {
-    // 즐겨찾기는 항상 상위
     const af = favorites.includes(a.ticker) ? 0 : 1
     const bf = favorites.includes(b.ticker) ? 0 : 1
     if (af !== bf) return af - bf
-    if (sortMode === 'alpha') {
-      return a.name.localeCompare(b.name, 'ko')
-    }
+    if (sortMode === 'alpha') return a.name.localeCompare(b.name, 'ko')
     return 0
   })
 
-  const upCount = stocks.filter(s => {
-    const b = briefings[s.ticker]
-    return b && b.changeRate > 0
-  }).length
-
-  const downCount = stocks.filter(s => {
-    const b = briefings[s.ticker]
-    return b && b.changeRate < 0
-  }).length
+  // 가격 기준으로 상승/하락 카운트
+  const upCount = stocks.filter(s => (prices[s.ticker]?.changeRate ?? 0) > 0).length
+  const downCount = stocks.filter(s => (prices[s.ticker]?.changeRate ?? 0) < 0).length
 
   const activeLabel = PROFILES.find(p => p.id === activeProfile)?.label || ''
+
+  // StockCard는 기존 briefingData 형태 유지 — 가격+브리핑 병합
+  function getCardData(ticker) {
+    const p = prices[ticker] || {}
+    const b = briefings[ticker] || {}
+    if (!Object.keys(p).length && !Object.keys(b).length) return null
+    return { ...p, ...b }
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
@@ -187,11 +203,11 @@ export default function App() {
           <>
             <SummaryCards total={stocks.length} up={upCount} down={downCount} />
 
-            <MarketReport apiKeys={apiKeys} />
+            <MarketReport />
 
             {canEdit ? (
               <div className="mb-4">
-                <SearchBar onAdd={handleAddStock} existingTickers={stocks.map(s => s.ticker)} />
+                <SearchBar onAdd={stock => addStock(stock)} existingTickers={stocks.map(s => s.ticker)} />
               </div>
             ) : (
               <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-4 py-3 mb-4 text-sm flex items-center gap-2">
@@ -240,8 +256,8 @@ export default function App() {
                   <StockCard
                     key={stock.ticker}
                     stock={stock}
-                    briefingData={briefings[stock.ticker]}
-                    isLoading={loadingTickers.includes(stock.ticker)}
+                    briefingData={getCardData(stock.ticker)}
+                    isLoading={loadingTickers.includes(stock.ticker) || (priceLoading && !prices[stock.ticker])}
                     onRemove={canEdit ? () => handleRemoveStock(stock.ticker) : null}
                     isFavorite={favorites.includes(stock.ticker)}
                     onToggleFavorite={() => toggleFavorite(stock.ticker)}

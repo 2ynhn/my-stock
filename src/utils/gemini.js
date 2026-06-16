@@ -180,25 +180,18 @@ export async function fetchMarketBriefing(apiKey, model) {
 
 export async function fetchBriefings(stocks, apiKey, model) {
   model = model || 'gemini-2.5-flash'
-  const stockList = stocks.map(s => s.name + ' (' + s.ticker + ', ' + (s.market === 'KR' ? 'Korean' : 'US') + ' market)').join('\n')
+  const stockList = stocks.map(s => `${s.name} (${s.ticker}, ${s.market === 'KR' ? 'Korean' : 'US'} market)`).join('\n')
+  const today = new Date().toISOString().slice(0, 10)
 
-  const now = new Date().toISOString()
-  const prompt = 'You are a financial data assistant with access to real-time market data. Today is ' + now + '.\n\n'
-    + 'For each of the following stocks, provide current market data and a brief news summary:\n'
-    + stockList + '\n\n'
-    + 'Respond with ONLY a JSON array (no markdown), where each element has:\n'
-    + '- ticker: string (exact ticker symbol)\n'
-    + '- currentPrice: number (latest price)\n'
-    + '- change: number (price change today)\n'
-    + '- changeRate: number (percentage change today, e.g. 1.5 for +1.5%)\n'
-    + '- currency: string ("KRW" for Korean stocks, "USD" for US stocks)\n'
-    + '- briefing: array of 2-3 strings (recent news/analysis bullet points in Korean)\n'
-    + '- lastUpdated: string (current time in Korean format, e.g. "2024-01-15 14:30 기준")\n\n'
-    + 'IMPORTANT: Use Google Search to get the most recent real-time prices. Respond with ONLY the JSON array.'
+  const prompt =
+    `Today is ${today}. For each stock below, use Google Search to find the most recent news and write 2-3 Korean bullet-point sentences.\n\n` +
+    stockList + '\n\n' +
+    'Return ONLY a JSON array (no markdown):\n' +
+    '[{"ticker":"TICKER","briefing":["뉴스1","뉴스2","뉴스3"],"lastUpdated":"YYYY-MM-DD 기준"}]'
 
   const data = await callGeminiWithRetry(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
     contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.1, maxOutputTokens: 4096 },
+    generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
     tools: [{ googleSearch: {} }],
   })
 
