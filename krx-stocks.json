@@ -735,6 +735,11 @@
     "market": "KR"
   },
   {
+    "ticker": "0193M0.KS",
+    "name": "BNK 27-12 특수채(AAA이상)액티브",
+    "market": "KR"
+  },
+  {
     "ticker": "466810.KS",
     "name": "BNK 2차전지양극재",
     "market": "KR"
@@ -2057,6 +2062,11 @@
   {
     "ticker": "498270.KS",
     "name": "KIWOOM 미국양자컴퓨팅",
+    "market": "KR"
+  },
+  {
+    "ticker": "0207Z0.KS",
+    "name": "KIWOOM 미국우주데이터센터인프라",
     "market": "KR"
   },
   {
@@ -5512,6 +5522,11 @@
   {
     "ticker": "0152E0.KS",
     "name": "SOL 배당성향탑픽액티브",
+    "market": "KR"
+  },
+  {
+    "ticker": "0207G0.KS",
+    "name": "SOL 우주항공밸류체인",
     "market": "KR"
   },
   {
