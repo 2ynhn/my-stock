@@ -9770,6 +9770,11 @@
     "market": "KR"
   },
   {
+    "ticker": "0165X0.KQ",
+    "name": "메리츠제2호스팩",
+    "market": "KR"
+  },
+  {
     "ticker": "408920.KQ",
     "name": "메쎄이상",
     "market": "KR"
@@ -15245,11 +15250,6 @@
     "market": "KR"
   },
   {
-    "ticker": "006490.KS",
-    "name": "인스코비",
-    "market": "KR"
-  },
-  {
     "ticker": "465480.KQ",
     "name": "인스피언",
     "market": "KR"
@@ -17777,6 +17777,11 @@
   {
     "ticker": "053160.KQ",
     "name": "프리엠스",
+    "market": "KR"
+  },
+  {
+    "ticker": "006490.KS",
+    "name": "프리티",
     "market": "KR"
   },
   {
